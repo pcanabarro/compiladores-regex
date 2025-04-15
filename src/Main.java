@@ -1,4 +1,5 @@
 import java.util.*;
+import java.util.regex.*;
 
 class Token {
     int id;
@@ -10,43 +11,88 @@ class Token {
         this.value = value;
         this.type = type;
     }
+
+    @Override
+    public String toString() {
+        if (type.equals("símbolo"))
+            return "<" + value + ",>";
+        else
+            return "<" + type + "," + id + ">";
+    }
 }
 
 public class Main {
+    static List<String> reservedWords = Arrays.asList("int", "double", "char", "float", "if", "while", "for");
+    static Set<String> symbols = new HashSet<>(Arrays.asList("(", ")", ";", "=", "<", ">", "{", "}", "+", "-", "*", "/"));
+    static Map<String, Token> symbolTable = new LinkedHashMap<>();
+    static int currentId = 1;
 
-    // Token table
-    static List<Token> tokenTable = new ArrayList<>();
-
-    static {
-        tokenTable.add(new Token(1, "int", "reserved"));
-        tokenTable.add(new Token(2, "Ab", "identifier"));
-        tokenTable.add(new Token(3, "float", "reserved"));
-        tokenTable.add(new Token(4, "Exemplo", "identifier"));
-        tokenTable.add(new Token(5, "3456,567", "number"));
-        tokenTable.add(new Token(6, "while", "reserved"));
-        tokenTable.add(new Token(7, "500", "number"));
-    }
-
-    public static String analyzeToken(String input) {
-        for (Token token : tokenTable) {
-            if (token.value.equals(input)) {
-                return "<" + token.type + ", " + token.id + ">";
-            }
-        }
-        return "<unknown, -1>";
-    }
+    static Pattern identifierPattern = Pattern.compile("^[A-Z][a-zA-Z]*$");
+    static Pattern floatNumberPattern = Pattern.compile("^\\d+,\\d+$");
+    static Pattern integerPattern = Pattern.compile("^\\d+$");
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        System.out.println("Enter a line of code:");
-        String lineInput = scanner.nextLine();
+        System.out.println("Digite o código (finalize com linha vazia):");
 
-        String[] tokens = lineInput.split("\\s+");
+        List<List<String>> tokenLines = new ArrayList<>();
 
-        System.out.println("Token analysis result:");
-        for (String token : tokens) {
-            String result = analyzeToken(token);
-            System.out.println(token + " -> " + result);
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine();
+            if (line.isEmpty()) break;
+
+            line = line.replaceAll("#.*$", "");
+
+            for (String sym : symbols) {
+                line = line.replaceAll(Pattern.quote(sym), " " + sym + " ");
+            }
+
+            String[] parts = line.trim().split("\\s+");
+
+            List<String> tokensForLine = new ArrayList<>();
+
+            for (String part : parts) {
+                if (part.isEmpty()) continue;
+
+                if (symbols.contains(part)) {
+                    tokensForLine.add("<" + part + ",>");
+                } else if (reservedWords.contains(part)) {
+                    tokensForLine.add(getOrCreateToken(part, "reservada").toString());
+                } else if (identifierPattern.matcher(part).matches()) {
+                    tokensForLine.add(getOrCreateToken(part, "identificador").toString());
+                } else if (floatNumberPattern.matcher(part).matches()) {
+                    tokensForLine.add(getOrCreateToken(part, "número").toString());
+                } else if (integerPattern.matcher(part).matches()) {
+                    tokensForLine.add(getOrCreateToken(part, "número").toString());
+                }
+            }
+
+            if (!tokensForLine.isEmpty()) {
+                tokenLines.add(tokensForLine);
+            }
+        }
+
+        System.out.println("\nSaída dos tokens por linha:");
+        for (List<String> tokenLine : tokenLines) {
+            for (String token : tokenLine) {
+                System.out.print(token + " ");
+            }
+            System.out.println();
+        }
+
+//        System.out.println("\nTabela de símbolos:");
+//        for (Token token : symbolTable.values()) {
+//            System.out.println("<" + token.type + ", " + token.id + "> → " + token.value);
+//        }
+    }
+
+    private static Token getOrCreateToken(String value, String type) {
+        if (symbolTable.containsKey(value)) {
+            return symbolTable.get(value);
+        } else {
+            Token token = new Token(currentId++, value, type);
+            symbolTable.put(value, token);
+            return token;
         }
     }
 }
